@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>공문서 오탈자 검사</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    textarea { width: 100%; height: 200px; }
+    button { margin-top: 10px; padding: 10px; }
+    #output { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>공문서 오탈자 검사</h1>
+  <textarea id="input" placeholder="여기에 공문서를 입력하세요"></textarea>
+  <button onclick="checkSpelling()">검사하기</button>
+  <div id="output">여기에 수정된 텍스트가 나옵니다.</div>
+
+  <script>
+    async function checkSpelling() {
+      const inputText = document.getElementById('input').value;
+      alert('입력한 텍스트: ' + inputText); // 지금은 경고창으로 테스트
+    }
+  </script>
+</body>
+</html>
