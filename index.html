@@ -19,7 +19,23 @@
   <script>
     async function checkSpelling() {
       const inputText = document.getElementById('input').value;
-      alert('입력한 텍스트: ' + inputText); // 지금은 경고창으로 테스트
+      try {
+        // Netlify Functions 호출
+        const response = await fetch('/.netlify/functions/spellcheck', {
+          method: 'POST',
+          body: JSON.stringify({ text: inputText }),
+        });
+        const data = await response.json();
+        
+        // 결과 출력
+        if (data.correctedText) {
+          document.getElementById('output').innerText = data.correctedText;
+        } else {
+          document.getElementById('output').innerText = '오류: ' + data.error;
+        }
+      } catch (error) {
+        document.getElementById('output').innerText = '오류가 발생했습니다.';
+      }
     }
   </script>
 </body>
