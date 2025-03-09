@@ -21,7 +21,7 @@
       const inputText = document.getElementById('input').value;
       try {
         // Netlify Functions 호출
-        const response = await fetch('/.netlify/functions/checker', {
+        const response = await fetch('/.netlify/functions/spellcheck', {
           method: 'POST',
           body: JSON.stringify({ text: inputText }),
         });
