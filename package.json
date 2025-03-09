@@ -8,5 +8,9 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "@netlify/functions": "^3.0.1",
+    "openai": "^4.86.2"
+  }
 }
