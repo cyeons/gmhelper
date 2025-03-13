@@ -11,29 +11,52 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: '잘못된 요청 데이터' }) };
   }
 
-  const { dept, docNumber, docTitle, docDate, content, admin, attachment } = body;
-  console.log('입력값:', { dept, docNumber, docTitle, docDate, content, admin, attachment });
+  const { deptDocNumber, docTitle, docDate, content, admin, attachment } = body;
+  console.log('입력값:', { deptDocNumber, docTitle, docDate, content, admin, attachment });
 
-  if (!content || !attachment) {
+  if (!content) {
     console.log('필수 항목 누락');
-    return { statusCode: 400, body: JSON.stringify({ error: '필수 항목(본문, 붙임)이 누락되었습니다.' }) };
+    return { statusCode: 400, body: JSON.stringify({ error: '필수 항목(본문)이 누락되었습니다.' }) };
   }
 
   // 관련 문서 유무 체크
-  const hasRelated = dept || docNumber || docTitle || docDate;
-  let prompt = '한국 초등학교 공문 형식으로 작성하세요:\n';
-  
+  const hasRelated = deptDocNumber && docTitle && docDate; // 모두 있어야 관련 문서로 간주
+  const hasAdmin = admin;
+  const hasAttachment = attachment;
+
+  let prompt = `
+    다음 조건을 엄격히 지켜 한국 초등학교 공문 형식으로 작성하세요:
+    - 번호는 "1.", "2.", "3." 형식으로 붙이며, 입력값에 따라 섹션 생략 가능.
+    - "관련"은 입력값이 모두 있을 때만 추가, 형식은 "부서명-문서번호(시행날짜, \\"문서제목\\")".
+    - "본문"은 항상 포함, 첫 줄은 "입력값을 다음과 같이 안내하오니,"로 시작하고 협조 요청은 상황에 따라 "귀 기관의 해당자가 ... 적극 참여할 수 있도록 협조하여 주시기 바랍니다" 또는 "강사에 선정된 교사가 참석할 수 있도록 협조 부탁드립니다"로 조정.
+    - "행정사항"은 입력값 있을 때만 추가, "가.", "나."로 항목화.
+    - "붙임"은 입력값 있을 때만 추가, "붙임"으로 시작하고 "1부. 끝."으로 마무리.
+    - 각 섹션 사이에 빈 줄 한 줄씩 추가.
+  `;
+
   if (hasRelated) {
-    prompt += `1. 관련: ${dept || '부서명'}-${docNumber || '문서번호'}(${docDate || '시행날짜'}, "${docTitle || '문서제목'}")\n`;
+    prompt += `
+      1. 관련: ${deptDocNumber}(${docDate}, "${docTitle}")
+    `;
   }
-  
-  prompt += `${hasRelated ? '2' : '1'}. 본문: ${content} ("다음과 같이 안내하오니, 필요시 협조 부탁드립니다"로 시작, "가.", "나."로 항목화, 필요시 1), 2) 하위 항목 포함)\n`;
-  
-  if (admin) {
-    prompt += `${hasRelated ? '3' : '2'}. 행정사항: ${admin} ("본 공문으로 위촉장을 대신합니다" 포함 가능, 문의 연락처 추가 가능)\n`;
+
+  prompt += `
+    ${hasRelated ? '2' : '1'}. ${content}을 다음과 같이 안내하오니, ${hasAdmin ? '귀 기관의 해당자가 적극 참여할 수 있도록 협조하여 주시기 바랍니다' : '강사에 선정된 교사가 참석할 수 있도록 협조 부탁드립니다'}.
+  `;
+  prompt += content.split('\n').map(line => `  ${line}`).join('\n');
+
+  if (hasAdmin) {
+    prompt += `
+      ${hasRelated ? '3' : '2'}. 행정사항
+    `;
+    prompt += admin.split('\n').map(line => `  ${line}`).join('\n');
   }
-  
-  prompt += `붙임: ${attachment} ("붙임"으로 시작, "1부. 끝." 형식으로 첨부 자료 나열)`;
+
+  if (hasAttachment) {
+    prompt += `
+      붙임  ${attachment} 1부. 끝.
+    `;
+  }
 
   console.log('프롬프트:', prompt);
 
