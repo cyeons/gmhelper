@@ -2,40 +2,148 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>공문서 작성 서비스</title>
+  <title>공문서 작성 도우미</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    label { display: block; margin: 10px 0 5px; }
-    input, textarea { width: 100%; max-width: 500px; padding: 5px; }
-    button { margin-top: 10px; padding: 10px 20px; }
-    #output { margin-top: 20px; white-space: pre-wrap; border: 1px solid #ccc; padding: 10px; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f7fa;
+      color: #333;
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .input-section, .output-section {
+      flex: 1;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    h2 {
+      font-size: 18px;
+      color: #34495e;
+      margin: 15px 0 10px;
+    }
+    label {
+      display: block;
+      margin: 10px 0 5px;
+      font-weight: 500;
+    }
+    .related-group {
+      display: flex;
+      gap: 10px;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      box-sizing: border-box;
+      font-size: 14px;
+    }
+    .related-group input {
+      flex: 1;
+    }
+    #docNumber { flex: 0.8; }
+    #docDate { flex: 0.8; }
+    textarea#content {
+      min-height: 150px; /* 본문 칸 키움 */
+    }
+    .attachment-group {
+      display: flex;
+      gap: 10px;
+    }
+    #attachment { flex: 3; }
+    #attachmentCount {
+      flex: 0.5; /* 부수 칸 줄임 */
+      text-align: center;
+    }
+    button {
+      background-color: #3498db;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 15px;
+    }
+    button:hover {
+      background-color: #2980b9;
+    }
+    #output {
+      white-space: pre-wrap;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    #loading {
+      display: none;
+      width: 20px;
+      height: 20px;
+      border: 3px solid #ddd;
+      border-top: 3px solid #3498db;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
-  <h1>공문서 작성 서비스</h1>
-  
-  <h2>1. 관련 문서 (선택)</h2>
-  <label for="deptDocNumber">부서명-문서번호</label>
-  <input type="text" id="deptDocNumber" placeholder="예: 행복초-123">
-  
-  <label for="docTitle">문서제목</label>
-  <input type="text" id="docTitle" placeholder="예: 2024년 행사 계획 안내">
-  
-  <label for="docDate">시행날짜</label>
-  <input type="text" id="docDate" placeholder="예: 2024.01.01.">
+  <div class="container">
+    <div class="input-section">
+      <h2>1. 관련 문서 (선택)</h2>
+      <div class="related-group">
+        <div>
+          <label for="dept">부서명</label>
+          <input type="text" id="dept">
+        </div>
+        <div>
+          <label for="docNumber">문서번호</label>
+          <input type="text" id="docNumber">
+        </div>
+        <div>
+          <label for="docDate">시행날짜</label>
+          <input type="text" id="docDate">
+        </div>
+        <div>
+          <label for="docTitle">제목</label>
+          <input type="text" id="docTitle">
+        </div>
+      </div>
 
-  <h2>2. 본문 (필수)</h2>
-  <label for="content">본문 내용</label>
-  <textarea id="content" rows="5" placeholder="예: 2024년 학교 행사 관련 안내. 가. 목적: 행사 준비, 나. 대상: 전교생, 다. 기간: 2024.01.01.~2024.12.31., 라. 세부사항: 일시 2024.05.01. 10:00 장소 학교 강당, 문의: 02-123-4567"></textarea>
+      <h2>2. 본문 (필수)</h2>
+      <label for="content">본문 내용</label>
+      <textarea id="content"></textarea>
 
-  <h2>붙임 (선택)</h2>
-  <label for="attachment">첨부 자료</label>
-  <textarea id="attachment" rows="3" placeholder="예: 2024년 행사 계획서"></textarea>
-  <label for="attachmentCount">부수</label>
-  <input type="number" id="attachmentCount" min="1" placeholder="기본값: 1">
+      <h2>3. 붙임 (선택)</h2>
+      <div class="attachment-group">
+        <div>
+          <label for="attachment">첨부 자료</label>
+          <input type="text" id="attachment">
+        </div>
+        <div>
+          <label for="attachmentCount">부수</label>
+          <input type="number" id="attachmentCount" min="1" value="1">
+        </div>
+      </div>
 
-  <button onclick="generateDoc()">공문서 생성</button>
-  <pre id="output">여기에 생성된 공문서가 표시됩니다.</pre>
+      <button onclick="generateDoc()">공문서 생성</button>
+    </div>
+    <div class="output-section">
+      <h2>생성된 공문서</h2>
+      <div id="loading"></div>
+      <pre id="output">여기에 공문서가 표시됩니다.</pre>
+    </div>
+  </div>
 
   <script>
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
@@ -43,9 +151,11 @@
     const functionUrl = `${baseUrl}/.netlify/functions/generateDoc`;
 
     async function generateDoc() {
-      const deptDocNumber = document.getElementById('deptDocNumber').value;
-      const docTitle = document.getElementById('docTitle').value;
+      const dept = document.getElementById('dept').value;
+      const docNumber = document.getElementById('docNumber').value;
       const docDate = document.getElementById('docDate').value;
+      const docTitle = document.getElementById('docTitle').value;
+      const deptDocNumber = dept && docNumber ? `${dept}-${docNumber}` : '';
       const content = document.getElementById('content').value;
       const attachment = document.getElementById('attachment').value;
       const attachmentCount = document.getElementById('attachmentCount').value || '1';
@@ -55,7 +165,11 @@
         return;
       }
 
-      console.log('호출 URL:', functionUrl);
+      const output = document.getElementById('output');
+      const loading = document.getElementById('loading');
+      output.innerText = '';
+      loading.style.display = 'block';
+
       try {
         const response = await fetch(functionUrl, {
           method: 'POST',
@@ -67,9 +181,11 @@
           throw new Error(`서버 오류: ${response.status} - ${text}`);
         }
         const data = await response.json();
-        document.getElementById('output').innerText = data.generatedDoc || data.error;
+        output.innerText = data.generatedDoc || data.error;
       } catch (error) {
-        document.getElementById('output').innerText = '오류 발생: ' + error.message;
+        output.innerText = '오류 발생: ' + error.message;
+      } finally {
+        loading.style.display = 'none';
       }
     }
   </script>
