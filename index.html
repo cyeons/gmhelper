@@ -4,137 +4,57 @@
   <meta charset="UTF-8">
   <title>공문서 작성 도우미</title>
   <style>
-    body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-      background-color: #f5f7fa;
-      color: #333;
-    }
-    .container {
-      display: flex;
-      gap: 20px;
-      max-width: 1200px;
-      margin: 0 auto;
-    }
-    .input-section, .output-section {
-      flex: 1;
-      background: #fff;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    }
-    h2 {
-      font-size: 18px;
-      color: #34495e;
-      margin: 15px 0 10px;
-    }
-    label {
-      display: block;
-      margin: 10px 0 5px;
-      font-weight: 500;
-    }
-    .related-line1 {
-      display: flex;
-      gap: 10px;
-    }
-    input, textarea {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      box-sizing: border-box;
-      font-size: 14px;
-    }
-    .related-line1 input {
-      flex: 1;
-    }
-    #docNumber { flex: 0.8; }
-    #docDate { flex: 0.8; }
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f7fa; color: #333; }
+    .container { display: flex; gap: 20px; max-width: 1200px; margin: 0 auto; }
+    .input-section, .output-section { flex: 1; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    h2 { font-size: 18px; color: #34495e; margin: 15px 0 10px; }
+    label { display: block; margin: 10px 0 5px; font-weight: 500; }
+    .related-group, .attachment-group { margin-bottom: 10px; }
+    .related-line1, .attachment-line { display: flex; gap: 10px; margin-bottom: 5px; }
+    input, textarea { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px; }
+    .related-line1 input { flex: 1; }
+    #docNumber, #docDate { flex: 0.8; }
     #docTitle { width: 100%; }
-    textarea#content {
-      min-height: 150px;
-    }
-    .attachment-group {
-      display: flex;
-      gap: 10px;
-    }
+    textarea#content { min-height: 150px; }
     #attachment { flex: 5; }
-    #attachmentCount {
-      flex: 0.3;
-      max-width: 60px;
-      text-align: center;
-    }
-    button {
-      background-color: #3498db;
-      color: white;
-      padding: 10px 20px;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-      margin-top: 15px;
-    }
-    button:hover {
-      background-color: #2980b9;
-    }
-    #output {
-      white-space: pre-wrap;
-      font-size: 14px;
-      line-height: 1.6;
-    }
-    #loading {
-      display: none;
-      width: 20px;
-      height: 20px;
-      border: 3px solid #ddd;
-      border-top: 3px solid #3498db;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 20px auto;
-    }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    #attachmentCount { flex: 0.3; max-width: 60px; text-align: center; }
+    .add-btn { background: #2ecc71; color: white; padding: 2px 8px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+    .add-btn:hover { background: #27ae60; }
+    button { background-color: #3498db; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 15px; }
+    button:hover { background-color: #2980b9; }
+    #output { white-space: pre-wrap; font-size: 14px; line-height: 1.6; }
+    #loading { display: none; width: 20px; height: 20px; border: 3px solid #ddd; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin: 20px auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="input-section">
-      <h2>1. 관련 문서 (선택)</h2>
-      <div class="related-line1">
-        <div>
-          <label for="dept">부서명</label>
-          <input type="text" id="dept">
-        </div>
-        <div>
-          <label for="docNumber">문서번호</label>
-          <input type="text" id="docNumber">
-        </div>
-        <div>
-          <label for="docDate">시행날짜</label>
-          <input type="text" id="docDate">
-        </div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="margin: 0;">1. 관련 문서 (선택)</h2>
+        <button class="add-btn" onclick="addRelated()">+</button>
       </div>
-      <div class="related-line2">
-        <label for="docTitle">제목</label>
-        <input type="text" id="docTitle">
+      <div class="related-group">
+        <div class="related-line1">
+          <div><label>부서명</label><input type="text" class="dept"></div>
+          <div><label>문서번호</label><input type="text" class="docNumber"></div>
+          <div><label>시행날짜</label><input type="text" class="docDate"></div>
+        </div>
+        <div class="related-line2"><label>제목</label><input type="text" class="docTitle"></div>
       </div>
 
       <h2>2. 본문 (필수)</h2>
       <label for="content">본문 내용</label>
       <textarea id="content"></textarea>
 
-      <h2>3. 붙임 (선택)</h2>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 style="margin: 0;">3. 붙임 (선택)</h2>
+        <button class="add-btn" onclick="addAttachment()">+</button>
+      </div>
       <div class="attachment-group">
-        <div>
-          <label for="attachment">첨부 자료</label>
-          <input type="text" id="attachment">
-        </div>
-        <div>
-          <label for="attachmentCount">부수</label>
-          <input type="number" id="attachmentCount" min="1" value="1">
+        <div class="attachment-line">
+          <div><label>첨부 자료</label><input type="text" class="attachment"></div>
+          <div><label>부수</label><input type="number" class="attachmentCount" min="1" value="1"></div>
         </div>
       </div>
 
@@ -148,19 +68,36 @@
   </div>
 
   <script>
+    function addRelated() {
+      const group = document.querySelector('.related-group');
+      const newRelated = group.querySelector('.related-line1').parentNode.cloneNode(true);
+      newRelated.querySelectorAll('input').forEach(input => input.value = '');
+      group.appendChild(newRelated);
+    }
+
+    function addAttachment() {
+      const group = document.querySelector('.attachment-group');
+      const newAttachment = group.children[0].cloneNode(true);
+      newAttachment.querySelectorAll('input').forEach(input => input.value = input.type === 'number' ? '1' : '');
+      group.appendChild(newAttachment);
+    }
+
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     const baseUrl = isLocal ? 'http://localhost:8888' : '';
     const functionUrl = `${baseUrl}/.netlify/functions/generateDoc`;
 
     async function generateDoc() {
-      const dept = document.getElementById('dept').value;
-      const docNumber = document.getElementById('docNumber').value;
-      const docDate = document.getElementById('docDate').value;
-      const docTitle = document.getElementById('docTitle').value;
-      const deptDocNumber = dept && docNumber ? `${dept}-${docNumber}` : '';
+      const relatedDocs = Array.from(document.querySelectorAll('.related-group .related-line1')).map(line => ({
+        dept: line.querySelector('.dept').value,
+        docNumber: line.querySelector('.docNumber').value,
+        docDate: line.querySelector('.docDate').value,
+        docTitle: line.nextElementSibling.querySelector('.docTitle').value
+      }));
       const content = document.getElementById('content').value;
-      const attachment = document.getElementById('attachment').value;
-      const attachmentCount = document.getElementById('attachmentCount').value || '1';
+      const attachments = Array.from(document.querySelectorAll('.attachment-line')).map(line => ({
+        attachment: line.querySelector('.attachment').value,
+        count: line.querySelector('.attachmentCount').value || '1'
+      }));
 
       if (!content) {
         document.getElementById('output').innerText = '필수 항목(본문)을 입력해주세요.';
@@ -176,7 +113,7 @@
         const response = await fetch(functionUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ deptDocNumber, docTitle, docDate, content, attachment, attachmentCount }),
+          body: JSON.stringify({ relatedDocs, content, attachments }),
         });
         if (!response.ok) {
           const text = await response.text();
