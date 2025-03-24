@@ -11,8 +11,8 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: '잘못된 요청 데이터' }) };
   }
 
-  const { deptDocNumber, docTitle, docDate, content, admin, attachment } = body;
-  console.log('입력값:', { deptDocNumber, docTitle, docDate, content, admin, attachment });
+  const { deptDocNumber, docTitle, docDate, content, attachment } = body;
+  console.log('입력값:', { deptDocNumber, docTitle, docDate, content, attachment });
 
   if (!content) {
     console.log('필수 항목 누락');
@@ -20,7 +20,6 @@ exports.handler = async (event) => {
   }
 
   const hasRelated = deptDocNumber && docTitle && docDate;
-  const hasAdmin = admin;
   const hasAttachment = attachment;
 
   let prompt = `
@@ -42,7 +41,6 @@ exports.handler = async (event) => {
     아래 입력값을 사용해 공문을 작성:
   `;
 
-  // 날짜 공백 처리
   const formattedDate = docDate ? docDate.replace(/(\d{4})\.(\d{1,2})\.(\d{1,2})/, '$1. $2. $3.') : '';
 
   if (hasRelated) {
@@ -52,17 +50,9 @@ exports.handler = async (event) => {
   }
 
   prompt += `
-    ${hasRelated ? '2' : '1'}. ${content}을 다음과 같이 안내하오니, ${hasAdmin ? '귀 기관의 해당자가 적극 참여할 수 있도록 협조하여 주시기 바랍니다' : '강사에 선정된 교사가 참석할 수 있도록 협조 부탁드립니다'}.
+    ${hasRelated ? '2' : '1'}. ${content}을 다음과 같이 안내하오니, 강사에 선정된 교사가 참석할 수 있도록 협조 부탁드립니다.
   `;
   prompt += content.split('\n').map(line => `  ${line}`).join('\n');
-
-  if (hasAdmin) {
-    prompt += `
-      
-      ${hasRelated ? '3' : '2'}. 행정사항
-    `;
-    prompt += admin.split('\n').map(line => `  ${line}`).join('\n');
-  }
 
   if (hasAttachment) {
     prompt += `

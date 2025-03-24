@@ -26,11 +26,7 @@
 
   <h2>2. 본문 (필수)</h2>
   <label for="content">본문 내용</label>
-  <textarea id="content" rows="5" placeholder="예: 2024년 학교 행사 관련 안내. 가. 목적: 행사 준비, 나. 대상: 전교생, 다. 기간: 2024.01.01.~2024.12.31., 라. 세부사항: 일시 2024.05.01. 10:00 장소 학교 강당"></textarea>
-
-  <h2>3. 행정사항 (선택)</h2>
-  <label for="admin">행정사항</label>
-  <textarea id="admin" rows="3" placeholder="예: 본 공문으로 위촉장 대신, 문의: 02-123-4567"></textarea>
+  <textarea id="content" rows="5" placeholder="예: 2024년 학교 행사 관련 안내. 가. 목적: 행사 준비, 나. 대상: 전교생, 다. 기간: 2024.01.01.~2024.12.31., 라. 세부사항: 일시 2024.05.01. 10:00 장소 학교 강당, 문의: 02-123-4567"></textarea>
 
   <h2>붙임 (선택)</h2>
   <label for="attachment">첨부 자료</label>
@@ -49,7 +45,6 @@
       const docTitle = document.getElementById('docTitle').value;
       const docDate = document.getElementById('docDate').value;
       const content = document.getElementById('content').value;
-      const admin = document.getElementById('admin').value;
       const attachment = document.getElementById('attachment').value;
 
       if (!content) {
@@ -62,7 +57,7 @@
         const response = await fetch(functionUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ deptDocNumber, docTitle, docDate, content, admin, attachment }),
+          body: JSON.stringify({ deptDocNumber, docTitle, docDate, content, attachment }),
         });
         if (!response.ok) {
           const text = await response.text();
