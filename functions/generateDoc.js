@@ -11,8 +11,8 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: '잘못된 요청 데이터' }) };
   }
 
-  const { deptDocNumber, docTitle, docDate, content, attachment } = body;
-  console.log('입력값:', { deptDocNumber, docTitle, docDate, content, attachment });
+  const { deptDocNumber, docTitle, docDate, content, attachment, attachmentCount } = body;
+  console.log('입력값:', { deptDocNumber, docTitle, docDate, content, attachment, attachmentCount });
 
   if (!content) {
     console.log('필수 항목 누락');
@@ -21,6 +21,7 @@ exports.handler = async (event) => {
 
   const hasRelated = deptDocNumber && docTitle && docDate;
   const hasAttachment = attachment;
+  const count = attachmentCount || '1'; // 기본값 1
 
   let prompt = `
     다음 규칙을 엄격히 준수하여 한국 초등학교 공문 형식으로 작성하세요:
@@ -32,7 +33,7 @@ exports.handler = async (event) => {
     - 한자어: 이해 어려운 한자어 사용 금지.
     - 시간: 24시간제, 쌍점 사용(예: 14:30).
     - 문서 끝: 공백 2칸 후 "끝.".
-    - 붙임: 입력 시 본문 후 한 줄 띄우고 "붙임  1. OOO 1부." 형식, 여러 문서면 "1., 2., …"로 나열.
+    - 붙임: 입력 시 본문 후 한 줄 띄우고 "붙임  1. OOO N부." 형식(N은 부수, 기본값 1), 여러 문서면 "1., 2., …"로 나열.
     - 물결표/붙임표: 앞뒤 붙임(예: 물결표~, 붙임표-).
     - 금액: 아라비아 숫자+한글 괄호(예: 금113,560원(금일십일만삼천오백육십원)).
     - 본문 단락: 입력값을 보고 적절히 나눔 조정.
@@ -50,14 +51,14 @@ exports.handler = async (event) => {
   }
 
   prompt += `
-    ${hasRelated ? '2' : '1'}. ${content}을 다음과 같이 안내하오니, 강사에 선정된 교사가 참석할 수 있도록 협조 부탁드립니다.
+    ${hasRelated ? '2' : '1'}. 
   `;
   prompt += content.split('\n').map(line => `  ${line}`).join('\n');
 
   if (hasAttachment) {
     prompt += `
       
-      붙임  1. ${attachment} 1부.
+      붙임  1. ${attachment} ${count}부.
     `;
   }
 
