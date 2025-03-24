@@ -34,7 +34,7 @@
       margin: 10px 0 5px;
       font-weight: 500;
     }
-    .related-group {
+    .related-line1 {
       display: flex;
       gap: 10px;
     }
@@ -46,21 +46,23 @@
       box-sizing: border-box;
       font-size: 14px;
     }
-    .related-group input {
+    .related-line1 input {
       flex: 1;
     }
     #docNumber { flex: 0.8; }
     #docDate { flex: 0.8; }
+    #docTitle { width: 100%; }
     textarea#content {
-      min-height: 150px; /* 본문 칸 키움 */
+      min-height: 150px;
     }
     .attachment-group {
       display: flex;
       gap: 10px;
     }
-    #attachment { flex: 3; }
+    #attachment { flex: 5; }
     #attachmentCount {
-      flex: 0.5; /* 부수 칸 줄임 */
+      flex: 0.3;
+      max-width: 60px;
       text-align: center;
     }
     button {
@@ -101,7 +103,7 @@
   <div class="container">
     <div class="input-section">
       <h2>1. 관련 문서 (선택)</h2>
-      <div class="related-group">
+      <div class="related-line1">
         <div>
           <label for="dept">부서명</label>
           <input type="text" id="dept">
@@ -114,10 +116,10 @@
           <label for="docDate">시행날짜</label>
           <input type="text" id="docDate">
         </div>
-        <div>
-          <label for="docTitle">제목</label>
-          <input type="text" id="docTitle">
-        </div>
+      </div>
+      <div class="related-line2">
+        <label for="docTitle">제목</label>
+        <input type="text" id="docTitle">
       </div>
 
       <h2>2. 본문 (필수)</h2>
