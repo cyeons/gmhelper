@@ -19,24 +19,35 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: '필수 항목(본문)이 누락되었습니다.' }) };
   }
 
-  // 관련 문서 유무 체크
-  const hasRelated = deptDocNumber && docTitle && docDate; // 모두 있어야 관련 문서로 간주
+  const hasRelated = deptDocNumber && docTitle && docDate;
   const hasAdmin = admin;
   const hasAttachment = attachment;
 
   let prompt = `
-    다음 조건을 엄격히 지켜 한국 초등학교 공문 형식으로 작성하세요:
-    - 번호는 "1.", "2.", "3." 형식으로 붙이며, 입력값에 따라 섹션 생략 가능.
-    - "관련"은 입력값이 모두 있을 때만 추가, 형식은 "부서명-문서번호(시행날짜, \\"문서제목\\")".
-    - "본문"은 항상 포함, 첫 줄은 "입력값을 다음과 같이 안내하오니,"로 시작하고 협조 요청은 상황에 따라 "귀 기관의 해당자가 ... 적극 참여할 수 있도록 협조하여 주시기 바랍니다" 또는 "강사에 선정된 교사가 참석할 수 있도록 협조 부탁드립니다"로 조정.
-    - "행정사항"은 입력값 있을 때만 추가, "가.", "나."로 항목화.
-    - "붙임"은 입력값 있을 때만 추가, "붙임"으로 시작하고 "1부. 끝."으로 마무리.
-    - 각 섹션 사이에 빈 줄 한 줄씩 추가.
+    다음 규칙을 엄격히 준수하여 한국 초등학교 공문 형식으로 작성하세요:
+    - 항목 기호: "1., 가., 1), 가), (1), (가), ①, ㉮" 순으로 사용, 특수 기호(□, ○, -, ∙) 제외.
+    - 표시 위치: 첫째 항목은 왼쪽 처음부터 시작, 둘째부터는 상위 항목에서 공백 2칸 들여쓰기, 기호와 내용 사이는 공백 1칸, 여러 줄은 내용 첫 글자에 정렬, 단일 항목은 기호 없음.
+    - 단락: 본문 단락 사이는 한 줄 띄우기, 본문과 붙임 사이도 한 줄 띄움.
+    - 날짜: "2025. 3. 14." 형식(공백 포함), 연도 생략 시 "3. 14.", 입력값에 공백 추가.
+    - 관련: "부서명-문서번호(날짜, \\"제목\\")"로 조합, 모두 입력 시만 포함.
+    - 한자어: 이해 어려운 한자어 사용 금지.
+    - 시간: 24시간제, 쌍점 사용(예: 14:30).
+    - 문서 끝: 공백 2칸 후 "끝.".
+    - 붙임: 입력 시 본문 후 한 줄 띄우고 "붙임  1. OOO 1부." 형식, 여러 문서면 "1., 2., …"로 나열.
+    - 물결표/붙임표: 앞뒤 붙임(예: 물결표~, 붙임표-).
+    - 금액: 아라비아 숫자+한글 괄호(예: 금113,560원(금일십일만삼천오백육십원)).
+    - 본문 단락: 입력값을 보고 적절히 나눔 조정.
+    - 표기: 한국어 표준 표기법 준수.
+    
+    아래 입력값을 사용해 공문을 작성:
   `;
+
+  // 날짜 공백 처리
+  const formattedDate = docDate ? docDate.replace(/(\d{4})\.(\d{1,2})\.(\d{1,2})/, '$1. $2. $3.') : '';
 
   if (hasRelated) {
     prompt += `
-      1. 관련: ${deptDocNumber}(${docDate}, "${docTitle}")
+      1. 관련: ${deptDocNumber}(${formattedDate}, "${docTitle}")
     `;
   }
 
@@ -47,6 +58,7 @@ exports.handler = async (event) => {
 
   if (hasAdmin) {
     prompt += `
+      
       ${hasRelated ? '3' : '2'}. 행정사항
     `;
     prompt += admin.split('\n').map(line => `  ${line}`).join('\n');
@@ -54,15 +66,21 @@ exports.handler = async (event) => {
 
   if (hasAttachment) {
     prompt += `
-      붙임  ${attachment} 1부. 끝.
+      
+      붙임  1. ${attachment} 1부.
     `;
   }
+
+  prompt += `
+    
+      끝.
+  `;
 
   console.log('프롬프트:', prompt);
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o-mini',
       messages: [{ role: 'user', content: prompt }],
     });
     console.log('OpenAI 응답:', response);
