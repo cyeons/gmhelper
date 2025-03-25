@@ -14,6 +14,8 @@ exports.handler = async (event) => {
 
   const hasRelated = relatedDocs && relatedDocs.length > 0 && relatedDocs.some(doc => doc.dept && doc.docNumber && doc.docDate);
   const hasAttachments = attachments && attachments.length > 0 && attachments.some(att => att.attachment);
+  const contentLines = content.split('\n');
+  const firstLine = contentLines[0];
 
   let prompt = `
     다음 규칙을 엄격히 준수하여 공문을 작성하세요:
@@ -25,8 +27,8 @@ exports.handler = async (event) => {
     - 관련: "1. 관련: 부서명-문서번호(날짜) \\"제목\\"" 형식, 여러 개일 경우 제목 있으면 개행 후 칸 맞춤, 제목 없으면 ", "로 연결, 제목은 선택 사항.
     - 한자어: 이해 어려운 한자어 사용 금지.
     - 시간: 24시간제, 쌍점 사용(예: 14:30), 범위는 '-'로 연결(예: 10:00-10:50).
-    - 본문: 첫 줄은 입력값을 자연스러운 문장으로 보완(예: "안내합니다", "보고하고자 합니다" 등), 나머지 내용은 "가. ", "나. " 등으로 항목화, 하위 항목은 "입니다" 없이 "항목: 내용" 형식.
-    - 붙임: 여러 개일 경우 "붙임  1. OOO N부." 형식으로 번호 붙여 칸 맞춰 개행, 하나면 "붙임  OOO N부.", N은 부수(기본값 1).
+    - 본문: 첫 줄은 "${firstLine}를 다음과 같이 [내용에 맞는 동사]"로, 입력값 외 단어 추가 금지, 하위 항목은 공백 2칸 들여쓰기 후 "가. ", "나. " 등으로 항목화, 항목 사이 한 줄 띄움, 하위 항목은 "입니다" 없이 "항목: 내용" 형식.
+    - 붙임: "붙임"은 한 번만 앞에 쓰고, 여러 개일 경우 "1. OOO N부."로 번호 붙여 개행, 마지막 항목 뒤 공백 2칸 후 "끝.", 하나면 "붙임  OOO N부.  끝.".
     - 문서 끝: 마지막 항목 끝에 공백 2칸 후 "끝." 추가.
     - 표기: 한국어 표준 표기법 준수.
     
@@ -48,19 +50,15 @@ exports.handler = async (event) => {
     });
   }
 
-  prompt += `\n\n    ${hasRelated ? '2' : '1'}. ${content}`;
+  prompt += `\n\n    ${hasRelated ? '2' : '1'}. ${firstLine}를 다음과 같이 개최합니다`;
+  prompt += contentLines.slice(1).map(line => `  ${line}`).join('\n  ');
 
   if (hasAttachments) {
     prompt += `\n\n    붙임`;
     attachments.forEach((att, index) => {
       if (!att.attachment) return;
-      if (attachments.length > 1) {
-        prompt += `\n      ${index + 1}. ${att.attachment} ${att.count}부.`;
-      } else {
-        prompt += `\n      ${att.attachment} ${att.count}부.  끝.`;
-      }
+      prompt += `\n      ${index + 1}. ${att.attachment} ${att.count}부.${index === attachments.length - 1 ? '  끝.' : ''}`;
     });
-    if (attachments.length > 1) prompt += `  끝.`;
   } else {
     prompt += `  끝.`;
   }
