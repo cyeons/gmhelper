@@ -16,6 +16,7 @@ exports.handler = async (event) => {
   const hasAttachments = attachments && attachments.length > 0 && attachments.some(att => att.attachment);
   const contentLines = content.split('\n');
   const firstLine = contentLines[0];
+  const validAttachments = attachments ? attachments.filter(att => att.attachment) : [];
 
   let prompt = `
     다음 규칙을 엄격히 준수하여 공문을 작성하세요:
@@ -30,7 +31,7 @@ exports.handler = async (event) => {
     - 한자어: 이해 어려운 한자어 사용 금지.
     - 시간: 24시간제, 쌍점 사용(예: 14:30), 범위는 '-'로 연결(예: 10:00-10:50).
     - 본문: 각 단락 첫 줄은 '1.', '2.' 등의 번호를 붙이고 시작, 첫 줄은 "${firstLine}"를 기반으로 입력값 의도(요청/안내/보고 등)에 따라 공문 관례에 맞게 보완, 요청 의도(예: "하고자" 포함)면 "~를 다음과 같이 [동사]하고자 합니다", 안내 의도(예: "안내" 포함, 하위 항목 있음)면 "~를 다음과 같이 안내합니다", 보고 의도(예: "보고" 포함)면 "~를 보고합니다", 그 외는 입력값 의미에 따라 "~를 [동사]합니다"로 보완, "구입합니다" 등 직설적 표현 피하고 관례적 표현 우선, 입력값 외 내용 추가 금지, 하위 항목은 첫 줄 의도와 맥락적으로 맞는 경우에만 입력값을 토대로 공백 2칸 들여쓰기 후 "가. ", "나. " 등으로 항목화(예: "구입"이면 "구입 품목", "예산" 등, "안내"이면 "일시", "장소" 등), 첫 줄과 하위 항목이 어울리지 않으면 항목화 강제하지 않음, 하위 항목 사이는 한 줄만 띄움, 하위 항목은 "입니다" 없이 "항목: 내용" 형식.
-    - 붙임: "붙임"은 한 번만 앞에 쓰고, 붙임 자료가 하나면 번호 없이 "붙임 OOO N부.  끝."으로 작성, 여러 개일 경우 "1. OOO N부."로 번호 붙여 개행, 마지막 항목 뒤 공백 2칸 후 "끝.", 붙임이 없으면 '붙임' 단어와 관련 내용 모두 생략.
+    - 붙임: "붙임"은 한 번만 앞에 쓰고, 붙임 자료가 하나면 번호 없이 "붙임 OOO N부.  끝."으로 작성, 번호 "1."은 절대 붙이지 않음, 여러 개일 경우 "1. OOO N부."로 번호 붙여 개행, 마지막 항목 뒤 공백 2칸 후 "끝.", 붙임이 없으면 '붙임' 단어와 관련 내용 모두 생략.
     - 문서 끝: 본문 마지막 문장 뒤 공백 2칸 후 "끝."을 동일 줄에 추가, 붙임이 있으면 붙임 마지막 항목 뒤에 적용.
     - 표기: 한국어 표준 표기법 준수.
     
@@ -63,10 +64,14 @@ exports.handler = async (event) => {
 
   if (hasAttachments) {
     prompt += `\n\n    붙임`;
-    attachments.forEach((att, index) => {
-      if (!att.attachment) return;
-      prompt += `\n      ${index + 1}. ${att.attachment} ${att.count}부.${index === attachments.length - 1 ? '  끝.' : ''}`;
-    });
+    if (validAttachments.length === 1) {
+      const att = validAttachments[0];
+      prompt += `\n      ${att.attachment} ${att.count}부.  끝.`;
+    } else {
+      validAttachments.forEach((att, index) => {
+        prompt += `\n      ${index + 1}. ${att.attachment} ${att.count}부.${index === validAttachments.length - 1 ? '  끝.' : ''}`;
+      });
+    }
   }
 
   console.log('프롬프트:', prompt);
