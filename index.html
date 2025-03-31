@@ -38,7 +38,7 @@
   <div id="modal-overlay" class="modal-overlay">
     <div class="modal">
       <h3>주의사항</h3>
-      <p>
+<p>
         본 서비스는 외부 ChatGPT API를 사용하므로, <br> <b>기밀 정보 및 개인정보는 제외하고 입력해주세요.</b>
       </p>
       <button onclick="hideModal()">확인</button>
@@ -59,7 +59,7 @@
   <div class="container">
     <div class="input-section">
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2 style="margin: 0;">1. 관련 문서</h2>
+        <h2 style="margin: 0;">1. 관련 문서 (선택)</h2>
         <button class="add-btn" onclick="addRelated()">+</button>
       </div>
       <div class="related-group">
@@ -71,12 +71,12 @@
         <div class="related-line2"><label>제목</label><input type="text" class="docTitle"></div>
       </div>
 
-      <h2>2. 본문</h2>
+      <h2>2. 본문 (필수)</h2>
       <label for="content">본문 내용</label>
       <textarea id="content"></textarea>
 
       <div style="display: flex; justify-content: space-between; align-items: center;">
-        <h2 style="margin: 0;">3. 붙임</h2>
+        <h2 style="margin: 0;">3. 붙임 (선택)</h2>
         <button class="add-btn" onclick="addAttachment()">+</button>
       </div>
       <div class="attachment-group">
@@ -92,6 +92,7 @@
       <h2>생성된 공문서</h2>
       <div id="loading"></div>
       <pre id="output">여기에 공문서가 표시됩니다.</pre>
+      <button onclick="copyToClipboard()">복사</button>
     </div>
   </div>
 
@@ -171,6 +172,15 @@
       } finally {
         loading.style.display = 'none';
       }
+    }
+
+    function copyToClipboard() {
+      const output = document.getElementById('output').innerText;
+      navigator.clipboard.writeText(output).then(() => {
+        alert('공문서가 클립보드에 복사되었습니다!');
+      }).catch(err => {
+        alert('복사 실패: ' + err);
+      });
     }
   </script>
 </body>
