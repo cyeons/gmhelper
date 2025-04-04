@@ -1,89 +1,78 @@
-const { OpenAI } = require('openai');
+const { OpenAI } = require("openai");
 
-exports.handler = async (event) => {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-  let body;
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+exports.handler = async function (event, context) {
   try {
-    body = JSON.parse(event.body || '{}');
-  } catch (e) {
-    return { statusCode: 400, body: JSON.stringify({ error: '잘못된 요청 데이터' }) };
-  }
+    const { relatedDocs, content, attachments } = JSON.parse(event.body);
 
-  const { relatedDocs, content, attachments } = body;
-  if (!content) return { statusCode: 400, body: JSON.stringify({ error: '필수 항목(본문)이 누락되었습니다.' }) };
+    const relatedText = relatedDocs
+      .map(
+        (doc) =>
+          `${doc.dept}-${doc.docNumber}(${doc.docDate}) "${doc.docTitle}"`
+      )
+      .join(", ");
 
-  const hasRelated = relatedDocs && relatedDocs.length > 0 && relatedDocs.some(doc => doc.dept && doc.docNumber && doc.docDate);
-  const hasAttachments = attachments && attachments.length > 0 && attachments.some(att => att.attachment);
-  const contentLines = content.split('\n');
-  const firstLine = contentLines[0];
-  const validAttachments = attachments ? attachments.filter(att => att.attachment) : [];
+    const attachmentText = attachments
+      .map((item) => `${item.attachment} ${item.count}부`)
+      .join(", ");
 
-  let prompt = `
-    다음 규칙을 엄격히 준수하여 공문을 작성하세요:
-    - 공문 헤더(학교명, 주소, 수신 등)는 추가하지 말고, 입력값(관련, 본문, 붙임)만 사용해 작성.
-    - 입력값만을 기반으로 공문서 형태로 변환, 사실에 없는 내용은 절대 지어내지 않음.
-    - 항목 기호: "1., 가., 1), 가), (1), (가), ①, ㉮" 순으로 사용, 특수 기호(□, ○, -, ∙) 제외.
-    - 표시 위치: 첫째 항목은 왼쪽 처음부터 시작, 둘째부터는 상위 항목에서 공백 2칸 들여쓰기, 기호와 내용 사이는 공백 1칸, 여러 줄은 내용 첫 글자에 정렬, 단일 항목은 기호 없음.
-    - 단락: 본문 단락 사이는 한 줄 띄우기, 본문과 붙임 사이도 한 줄 띄움, 하위 항목(가., 나. 등) 사이는 한 줄만 띄움.
-    - 날짜: "2025. 3. 14." 형식(공백 포함), 입력값에 공백 추가, 요일(예: (목)) 추가 가능.
-    - 금액: 아라비아 숫자로 표기하되, 숫자 뒤 괄호를 사용해 한글로 기재(예: "113,560원 (금일십일만삼천오백육십원)").
-    - 관련: "1. 관련: 부서명-문서번호(날짜) \\"제목\\"" 형식, 여러 개일 경우 제목 있으면 개행 후 칸 맞춤, 제목 없으면 ", "로 연결, 제목은 선택 사항, 관련 문서가 없으면 '1. 관련:' 항목 자체 생략하고 본문이 1번부터 시작.
-    - 한자어: 이해 어려운 한자어 사용 금지.
-    - 시간: 24시간제, 쌍점 사용(예: 14:30), 범위는 '-'로 연결(예: 10:00-10:50).
-    - 본문: 각 단락 첫 줄은 '1.', '2.' 등의 번호를 붙이고 시작, 첫 줄은 "${firstLine}"를 기반으로 입력값 의도(요청/안내/보고 등)에 따라 공문 관례에 맞게 보완, 요청 의도(예: "하고자" 포함)면 "~를 다음과 같이 [동사]하고자 합니다", 안내 의도(예: "안내" 포함, 하위 항목 있음)면 "~를 다음과 같이 안내합니다", 보고 의도(예: "보고" 포함)면 "~를 보고합니다", 그 외는 입력값 의미에 따라 "~를 [동사]합니다"로 보완, "구입합니다" 등 직설적 표현 피하고 관례적 표현 우선, 입력값 외 내용 추가 금지, 하위 항목은 첫 줄 의도와 맥락적으로 맞는 경우에만 입력값을 토대로 공백 2칸 들여쓰기 후 "가. ", "나. " 등으로 항목화(예: "구입"이면 "구입 품목", "예산" 등, "안내"이면 "일시", "장소" 등), 첫 줄과 하위 항목이 어울리지 않으면 항목화 강제하지 않음, 하위 항목 사이는 한 줄만 띄움, 하위 항목은 "입니다" 없이 "항목: 내용" 형식.
-    - 붙임: "붙임"은 한 번만 앞에 쓰고, 붙임 자료가 하나면 번호 없이 "붙임 OOO N부.  끝."으로 작성, 번호 "1."은 절대 붙이지 않음, 여러 개일 경우 "1. OOO N부."로 번호 붙여 개행, 마지막 항목 뒤 공백 2칸 후 "끝.", 붙임이 없으면 '붙임' 단어와 관련 내용 모두 생략.
-    - 문서 끝: 본문 마지막 문장 뒤 공백 2칸 후 "끝."을 동일 줄에 추가, 붙임이 있으면 붙임 마지막 항목 뒤에 적용.
-    - 표기: 한국어 표준 표기법 준수.
-    
-    아래 입력값을 사용해 공문을 작성:
-  `;
+    const prompt = `
+당신은 대한민국 초등학교의 공문서를 작성하는 AI 비서입니다.
 
-  if (hasRelated) {
-    const hasTitles = relatedDocs.some(doc => doc.docTitle);
-    prompt += `\n      1. 관련: `;
-    relatedDocs.forEach((doc, index) => {
-      const formattedDate = doc.docDate ? doc.docDate.replace(/(\d{4})\.(\d{1,2})\.(\d{1,2})/, '$1. $2. $3.') : '';
-      const deptDocNumber = doc.dept && doc.docNumber ? `${doc.dept}-${doc.docNumber}` : '';
-      if (!deptDocNumber || !formattedDate) return;
-      if (hasTitles) {
-        prompt += `${index > 0 ? '\n      ' : ''}${deptDocNumber}(${formattedDate})${doc.docTitle ? ` "${doc.docTitle}"` : ''}`;
-      } else {
-        prompt += `${index > 0 ? ', ' : ''}${deptDocNumber}(${formattedDate})`;
-      }
+아래에 입력된 정보를 바탕으로 [2025 개정 공문서 작성법] 및 [행정업무운영편람]의 규정에 따라 엄격하게 공문서를 작성하십시오.
+
+✅ 반드시 지켜야 할 작성 규칙:
+- 입력된 내용 외에는 어떠한 정보도 추가하지 마십시오.
+- 문장은 반드시 "~합니다", "~입니다" 형태의 사실형 종결어미만 사용하십시오.
+- 하위 항목은 '가.', '나.', '다.' 순으로 정리하며, 항목 간 줄을 띄우고 들여쓰지 않습니다.
+- '기간', '장소', '대상', '방법', '내용', '비용' 등의 단어가 있을 경우에만 항목으로 분리합니다.
+- 붙임 문서는 "붙임", 문서명, 부수 형식으로 작성하고, 마지막 줄은 반드시 "끝."으로 마무리합니다.
+- 숫자, 날짜, 시간은 행정서식 기준(예: 2025. 3. 10.)을 따릅니다.
+- 아래 예시 형식을 그대로 따르십시오.
+
+📄 예시:
+1. 관련: 교무기획부-2024(2025. 3. 1.) "2025학년도 학사 운영 계획"
+
+2. 2025학년도 학사 운영 계획을 다음과 같이 안내합니다.
+
+  가. 기간: 2025. 3. 4.(월) ~ 3. 8.(금)
+
+  나. 장소: 각 학년 교실
+
+  다. 대상: 전교생
+
+붙임  2025학년도 학사 운영 계획안 1부.  끝.
+
+📬 입력값:
+제목: ${content.split("\n")[0]}
+관련문서: ${relatedText}
+본문: ${content}
+붙임: ${attachmentText}
+`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      temperature: 0.3,
     });
-    prompt += '\n';
-  }
 
-  prompt += `\n    ${hasRelated ? '2' : '1'}. ${firstLine}`;
-  if (contentLines.length > 1) {
-    prompt += contentLines.slice(1).map(line => `  ${line}`).join('\n  ');
-  }
-  if (!hasAttachments) {
-    prompt += '  끝.';
-  }
+    const result = completion.choices[0].message.content;
 
-  if (hasAttachments) {
-    prompt += `\n\n    붙임`;
-    if (validAttachments.length === 1) {
-      const att = validAttachments[0];
-      prompt += `\n      ${att.attachment} ${att.count}부.  끝.`;
-    } else {
-      validAttachments.forEach((att, index) => {
-        prompt += `\n      ${index + 1}. ${att.attachment} ${att.count}부.${index === validAttachments.length - 1 ? '  끝.' : ''}`;
-      });
-    }
-  }
-
-  console.log('프롬프트:', prompt);
-
-  try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [{ role: 'user', content: prompt }],
-    });
-    const generatedDoc = response.choices[0].message.content;
-    return { statusCode: 200, body: JSON.stringify({ generatedDoc }) };
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ result }),
+    };
   } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: '공문서 생성 중 오류: ' + error.message }) };
+    console.error("Error generating document:", error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: error.message }),
+    };
   }
 };
