@@ -4,18 +4,28 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 exports.handler = async function (event, context) {
   try {
-    const { relatedDocs, content, attachments } = JSON.parse(event.body);
+    const data = JSON.parse(event.body);
+    const relatedDocs = data.relatedDocs || [];
+    const content = data.content || "";
+    const attachments = data.attachments || [];
+    const firstLine = content.split("\n")[0] || "";
 
-    const relatedText = (relatedDocs || [])
-      .map(
-        (doc) =>
-          `${doc.dept}-${doc.docNumber}(${doc.docDate}) "${doc.docTitle}"`
-      )
-      .join(", ");
+    const relatedText =
+      relatedDocs.length > 0
+        ? `1. 관련: ${relatedDocs
+            .map(
+              (doc) =>
+                `${doc.dept}-${doc.docNumber}(${doc.docDate}) "${doc.docTitle}"`
+            )
+            .join(", ")}\n\n`
+        : "";
 
-    const attachmentText = (attachments || [])
-      .map((item) => `${item.attachment} ${item.count}부`)
-      .join(", ");
+    const attachmentText =
+      attachments.length > 0
+        ? `붙임  ${attachments
+            .map((item) => `${item.attachment} ${item.count}부`)
+            .join(", ")}.  끝.`
+        : "끝.";
 
     const prompt = `
 당신은 대한민국 초등학교의 공문서를 작성하는 AI 비서입니다.
@@ -45,10 +55,12 @@ exports.handler = async function (event, context) {
 붙임  2025학년도 학사 운영 계획안 1부.  끝.
 
 📬 입력값:
-제목: ${content.split("\n")[0]}
-관련문서: ${relatedText}
-본문: ${content}
-붙임: ${attachmentText}
+
+${relatedText}2. ${firstLine}을 다음과 같이 안내합니다.
+
+${content}
+
+${attachmentText}
 `;
 
     const completion = await openai.chat.completions.create({
