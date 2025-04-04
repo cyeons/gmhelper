@@ -6,14 +6,14 @@ exports.handler = async function (event, context) {
   try {
     const { relatedDocs, content, attachments } = JSON.parse(event.body);
 
-    const relatedText = relatedDocs
+    const relatedText = (relatedDocs || [])
       .map(
         (doc) =>
           `${doc.dept}-${doc.docNumber}(${doc.docDate}) "${doc.docTitle}"`
       )
       .join(", ");
 
-    const attachmentText = attachments
+    const attachmentText = (attachments || [])
       .map((item) => `${item.attachment} ${item.count}부`)
       .join(", ");
 
