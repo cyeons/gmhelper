@@ -1,3 +1,4 @@
 [dev]
   functions = "functions"  # 함수 폴더 경로 지정
   port = 8888            # Netlify Dev 포트 (기본값)
+  env = {OPENAI_API_KEY="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"}
