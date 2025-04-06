@@ -1,90 +1,102 @@
-const { OpenAI } = require("openai");
+const { OpenAI } = require('openai');
+const fs = require('fs');
+const path = require('path');
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-exports.handler = async function (event, context) {
+exports.handler = async (event) => {
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  let body;
   try {
-    const data = JSON.parse(event.body);
-    const relatedDocs = data.relatedDocs || [];
-    const content = data.content || "";
-    const attachments = data.attachments || [];
-    const firstLine = content.split("\n")[0] || "";
+    body = JSON.parse(event.body || '{}');
+  } catch (e) {
+    return { statusCode: 400, body: JSON.stringify({ error: '잘못된 요청 데이터' }) };
+  }
 
-    const relatedText =
-      relatedDocs.length > 0
-        ? `1. 관련: ${relatedDocs
-            .map(
-              (doc) =>
-                `${doc.dept}-${doc.docNumber}(${doc.docDate}) "${doc.docTitle}"`
-            )
-            .join(", ")}\n\n`
-        : "";
+  const { relatedDocs = [], content = '', attachments = [] } = body;
+  if (!content.trim()) {
+    return { statusCode: 400, body: JSON.stringify({ error: '필수 항목(본문)이 누락되었습니다.' }) };
+  }
 
-    const attachmentText =
-      attachments.length > 0
-        ? `붙임  ${attachments
-            .map((item) => `${item.attachment} ${item.count}부`)
-            .join(", ")}.  끝.`
-        : "끝.";
+  const hasRelated = relatedDocs.length > 0 && relatedDocs.some(doc => doc.dept && doc.docNumber && doc.docDate);
+  const hasAttachments = attachments.length > 0 && attachments.some(att => att.attachment);
+  const contentLines = content.split('\n').filter(Boolean);
+  const firstLine = contentLines[0] || '';
+  const validAttachments = attachments.filter(att => att.attachment);
 
-    const prompt = `
-당신은 대한민국 초등학교의 공문서를 작성하는 AI 비서입니다.
+  // 문서 형식 조립
+  let rawDraft = '';
+  if (hasRelated) {
+    const hasTitles = relatedDocs.some(doc => doc.docTitle);
+    rawDraft += `1. 관련: `;
+    relatedDocs.forEach((doc, index) => {
+      const formattedDate = doc.docDate
+        ? doc.docDate.replace(/년|월|일/g, '').replace(/\\s+/g, ' ').trim().replace(/\\./g, '.').replace(/\\s/g, ' ') + '.'
+        : '';
+      const deptDocNumber = doc.dept && doc.docNumber ? `${doc.dept}-${doc.docNumber}` : '';
+      if (!deptDocNumber || !formattedDate) return;
+      if (hasTitles) {
+        rawDraft += `${index > 0 ? '\n          ' : ''}${deptDocNumber}(${formattedDate})${doc.docTitle ? ` "${doc.docTitle}"` : ''}`;
+      } else {
+        rawDraft += `${index > 0 ? ', ' : ''}${deptDocNumber}(${formattedDate})`;
+      }
+    });
+    rawDraft += '\n\n';
+  }
 
-아래에 입력된 정보를 바탕으로 [2025 개정 공문서 작성법] 및 [행정업무운영편람]의 규정에 따라 엄격하게 공문서를 작성하십시오.
+  rawDraft += `${hasRelated ? '2' : '1'}. ${firstLine}\n`;
+  if (contentLines.length > 1) {
+    rawDraft += contentLines.slice(1).map(line => `  ${line}`).join('\n') + '\n';
+  }
 
-✅ 반드시 지켜야 할 작성 규칙:
-- 입력된 내용 외에는 어떠한 정보도 추가하지 마십시오.
-- 문장은 반드시 "~합니다", "~입니다" 형태의 사실형 종결어미만 사용하십시오.
-- 하위 항목은 '가.', '나.', '다.' 순으로 정리하며, 항목 간 줄을 띄우고 들여쓰지 않습니다.
-- '기간', '장소', '대상', '방법', '내용', '비용' 등의 단어가 있을 경우에만 항목으로 분리합니다.
-- 붙임 문서는 "붙임", 문서명, 부수 형식으로 작성하고, 마지막 줄은 반드시 "끝."으로 마무리합니다.
-- 숫자, 날짜, 시간은 행정서식 기준(예: 2025. 3. 10.)을 따릅니다.
-- 아래 예시 형식을 그대로 따르십시오.
+  if (hasAttachments) {
+    rawDraft += `\n붙임`;
+    if (validAttachments.length === 1) {
+      const att = validAttachments[0];
+      rawDraft += `\n  ${att.attachment} ${att.count}부.  끝.`;
+    } else {
+      validAttachments.forEach((att, index) => {
+        rawDraft += `\n  ${index + 1}. ${att.attachment} ${att.count}부.${index === validAttachments.length - 1 ? '  끝.' : ''}`;
+      });
+    }
+  } else {
+    rawDraft += '  끝.';
+  }
 
-📄 예시:
-1. 관련: 교무기획부-2024(2025. 3. 1.) "2025학년도 학사 운영 계획"
+  // 📄 외부 prompt 규칙 파일 불러오기
+  const rulePath = path.join(__dirname, 'promptRules.txt');
+  let promptRules = '';
+  try {
+    promptRules = fs.readFileSync(rulePath, 'utf-8');
+  } catch (e) {
+    console.error('promptRules.txt 파일을 불러올 수 없습니다:', e);
+  }
 
-2. 2025학년도 학사 운영 계획을 다음과 같이 안내합니다.
+  const prompt = `
+다음은 초등학교 공문서 형식에 맞게 구성된 초안입니다.
+이 초안의 표현이 어색하거나 관례에 맞지 않는 경우, 공문 문체로 자연스럽게 다듬어 주세요.
 
-  가. 기간: 2025. 3. 4.(월) ~ 3. 8.(금)
+${promptRules}
 
-  나. 장소: 각 학년 교실
+📝 아래 문서 초안을 다듬어 주세요:
 
-  다. 대상: 전교생
-
-붙임  2025학년도 학사 운영 계획안 1부.  끝.
-
-📬 입력값:
-
-${relatedText}2. ${firstLine}을 다음과 같이 안내합니다.
-
-${content}
-
-${attachmentText}
+${rawDraft}
 `;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
     });
 
-    const result = completion.choices[0].message.content;
-
+    const generatedDoc = response.choices[0].message.content;
     return {
       statusCode: 200,
-      body: JSON.stringify({ result }),
+      body: JSON.stringify({ generatedDoc }),
     };
   } catch (error) {
-    console.error("Error generating document:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: error.message }),
+      body: JSON.stringify({ error: '공문서 생성 중 오류: ' + error.message }),
     };
   }
 };
